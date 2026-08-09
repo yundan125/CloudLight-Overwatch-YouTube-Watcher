@@ -1,1 +1,0 @@
-..\venv\Scripts\activate&cd ..\src&title ow-league-tokens Farmer&python main.py

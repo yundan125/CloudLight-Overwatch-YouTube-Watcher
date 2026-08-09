@@ -1,0 +1,26 @@
+{
+  "browser": "chrome",
+  "browser_path": "",
+  "headless": false,
+  "mute": true,
+  "mode": "auto",
+  "manual_url": "",
+  "check_interval": 300,
+  "channels": [
+    {
+      "name": "Overwatch Esports",
+      "id": "",
+      "url": "https://www.youtube.com/channel/UCiAInBL9kUzz1XRxk66v-gw/live",
+      "enabled": true
+    },
+    {
+      "name": "Overwatch Contenders",
+      "id": "",
+      "url": "https://www.youtube.com/channel/UCWPW0pjx6gncOEnTW8kYzrg/live",
+      "enabled": false
+    }
+  ],
+  "profiles": [
+    "主账号"
+  ]
+}
