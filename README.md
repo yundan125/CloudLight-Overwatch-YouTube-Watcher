@@ -2,26 +2,9 @@
 
 一个面向 Windows 的本地桌面工具：定期检查指定的守望先锋官方 YouTube 频道，发现直播后使用用户自己的 Chrome / Brave 独立 Profile 打开直播，并在运行期间检查浏览器和视频页面、尝试恢复意外暂停。
 
-本项目基于 [ucarno/ow-league-tokens](https://github.com/ucarno/ow-league-tokens) 改造，保留了原作者 ucarno 的项目归属说明和有价值的 Profile / 多账号思路。克隆到本仓库的原项目未包含单独的 `LICENSE` 文件；如上游补充许可证，分发时还应同时遵守其条款。
 
 > 本软件只负责自动打开并维持 YouTube 直播观看，不保证任何具体掉宝、奖励或观看时长一定被 Blizzard / YouTube 计入。
 
-## 为什么需要改造
-
-原版最后一轮功能代码来自 2023 年，无法在 2026 年环境中直接可靠使用：
-
-| 原版部分 | 2026 年状态 | 本版处理 |
-|---|---|---|
-| `undetected-chromedriver==3.4.6`、`selenium==4.9.0` | 与 Python 3.13、Chrome 151 已严重脱节，ChromeDriver 下载、版本匹配和 Google 自动化登录都很脆弱 | 删除 WebDriver 依赖，直接启动本机真实 Chrome / Brave |
-| `overwatchleague.com/en-us/schedule` | OWL 已结束，地址已转到新的 Overwatch Esports 网站，旧 `__NEXT_DATA__` 路径失效 | 完全移除 OWL schedule 逻辑 |
-| 页面搜索 `hqdefault_live.jpg` | 当前 YouTube 频道 HTML 已不再提供这一稳定标记 | 用 `yt-dlp` 的 `is_live/live_status` 元数据判断，公开页面 `isLiveNow` 仅作降级 |
-| 固定 OWL 频道 ID `UCiAInBL9kUzz1XRxk66v-gw` | 频道仍存在，现名为 **Overwatch Esports** | 保留 ID，但不再称为 OWL |
-| 独立 `profiles/<name>` | 思路仍然有效 | 保留并改成浏览器原生持久化 `user-data-dir` |
-| 多账号、静音、5 分钟检查、直播结束后等待 | 仍有价值 | 在 GUI 和后台监控服务中重写 |
-| 自动 144p DOM 点击 | 原版未完成，且 YouTube 菜单结构/语言易变化 | 不实现脆弱点击；提示首次手动选择 144p |
-| PyInstaller 5.13 / Python 3.11 shell 构建 | 不适用于当前 Python 3.13 Windows 环境 | 改为 PowerShell + PyInstaller 6 的 Windows onedir 构建 |
-
-OWL 已由新的 Overwatch Champions Series（OWCS）生态取代。程序定位因此由“代币机器人”改为通用的守望先锋 YouTube 直播观看器，不再包含 OWL Token、OWL 赛程或奖励到账承诺。
 
 ## 当前功能
 
@@ -65,7 +48,7 @@ CloudLight Overwatch YouTube Watcher/
 }
 ```
 
-实际随包的 `channels` 默认包含原项目已有的 Overwatch Esports 主频道，并保留但默认关闭旧 Overwatch Contenders 频道。也可以在 GUI 中增加频道 ID 或频道 URL。
+实际随包的 `channels` 默认包含 Overwatch Esports 主频道，并额外提供一个默认关闭的 Overwatch Contenders 频道。也可以在 GUI 中增加频道 ID 或频道 URL。
 
 ## 直接运行
 
