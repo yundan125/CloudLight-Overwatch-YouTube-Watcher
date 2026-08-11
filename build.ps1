@@ -25,7 +25,7 @@ if (Test-Path -LiteralPath $ZipPath) {
     Remove-Item -LiteralPath $ZipPath -Force
 }
 
-$IconPath = Join-Path $ProjectRoot "assets\cloudlight.ico"
+$IconPath = Join-Path $ProjectRoot "assets\app-icon.ico"
 $IconArgs = @()
 if (Test-Path -LiteralPath $IconPath) {
     $IconArgs = @("--icon", $IconPath)

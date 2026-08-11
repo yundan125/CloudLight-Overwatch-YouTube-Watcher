@@ -234,7 +234,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle(f"{APP_NAME} {APP_VERSION}")
         self.resize(980, 760)
-        icon_path = RESOURCE_DIR / "assets" / "cloudlight.ico"
+        icon_path = RESOURCE_DIR / "assets" / "app-icon.png"
         if icon_path.exists():
             self.setWindowIcon(QIcon(str(icon_path)))
 
