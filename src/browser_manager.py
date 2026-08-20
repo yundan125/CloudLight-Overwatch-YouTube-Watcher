@@ -17,6 +17,7 @@ import requests
 import websocket
 
 from config import profile_path
+from live_detector import extract_video_id
 
 
 LOGGER = logging.getLogger(__name__)
@@ -186,6 +187,57 @@ class BrowserSession:
         except (KeyError, TypeError):
             return "unavailable"
 
+    def sample_video_state(self, expected_video_id: str) -> dict[str, Any] | None:
+        """Sample the expected watch page and opportunistically resume a pause."""
+        if not expected_video_id:
+            return None
+        targets = [item for item in self.targets() if item.get("type") == "page"]
+        watch_target = next(
+            (item for item in reversed(targets) if extract_video_id(str(item.get("url", ""))) == expected_video_id),
+            None,
+        )
+        if not watch_target:
+            return None
+        mute_js = "true" if self.mute else "false"
+        expression = f"""
+            (() => {{
+              const v = document.querySelector('video');
+              if (!v) return {{
+                exists: false,
+                pageUrl: location.href,
+                title: document.title.replace(/\\s*-\\s*YouTube$/, '')
+              }};
+              const state = {{
+                exists: true,
+                paused: v.paused,
+                ended: v.ended,
+                currentTime: Number.isFinite(v.currentTime) ? v.currentTime : null,
+                readyState: v.readyState,
+                playbackRate: v.playbackRate,
+                pageUrl: location.href,
+                title: document.title.replace(/\\s*-\\s*YouTube$/, ''),
+                channel: document.querySelector('#owner #channel-name a, ytd-video-owner-renderer #channel-name a')?.textContent?.trim() || '',
+                resumeAttempted: false
+              }};
+              v.muted = {mute_js};
+              if (state.paused && !state.ended && state.readyState >= 2) {{
+                state.resumeAttempted = true;
+                v.play().catch(() => {{}});
+              }}
+              return state;
+            }})()
+        """
+        result = self._evaluate(watch_target, expression)
+        try:
+            value = result["result"]["result"]["value"]
+            if not isinstance(value, dict):
+                return None
+            if extract_video_id(str(value.get("pageUrl", ""))) != expected_video_id:
+                return None
+            return value
+        except (KeyError, TypeError):
+            return None
+
     def close(self) -> None:
         try:
             requests.get(f"{self.base_url}/json/version", timeout=0.5)
@@ -262,6 +314,13 @@ class BrowserManager:
             if session and session.is_running():
                 return session, False
         return self.launch(profile, url, config), True
+
+    def sample_video_state(self, profile: str, expected_video_id: str) -> dict[str, Any] | None:
+        with self._lock:
+            session = self.sessions.get(profile)
+        if not session or not session.is_running():
+            return None
+        return session.sample_video_state(expected_video_id)
 
     def close_all(self) -> None:
         with self._lock:

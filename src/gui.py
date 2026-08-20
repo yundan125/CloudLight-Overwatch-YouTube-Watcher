@@ -40,6 +40,7 @@ from PySide6.QtWidgets import (
 from config import load_config, profile_path, save_config, validate_profile_name
 from constants import APP_NAME, APP_VERSION
 from paths import RESOURCE_DIR
+from watch_history import format_duration
 from watcher import WatcherService
 
 
@@ -248,6 +249,11 @@ class MainWindow(QMainWindow):
         self.config = load_config()
         self._build_ui()
         self._load_into_ui()
+        self.history_refresh_timer = QTimer(self)
+        self.history_refresh_timer.setInterval(15_000)
+        self.history_refresh_timer.timeout.connect(self.refresh_watch_history)
+        self.history_refresh_timer.start()
+        self.refresh_watch_history()
         self.set_status("未启动")
         self.append_log("程序已启动；默认使用有窗口模式，登录请在真实浏览器中手动完成")
 
@@ -358,7 +364,37 @@ class MainWindow(QMainWindow):
         note.setObjectName("secondaryText")
         note.setContentsMargins(8, 8, 8, 8)
         layout.addWidget(note)
-        layout.addStretch()
+
+        history_group = QGroupBox("近 7 天观看记录")
+        history_layout = QVBoxLayout(history_group)
+        summary_row = QHBoxLayout()
+        self.today_total_label = QLabel("今日累计：00:00:00")
+        self.week_total_label = QLabel("近 7 天累计：00:00:00")
+        clear_history_button = QPushButton("清空记录")
+        clear_history_button.clicked.connect(self.clear_watch_history)
+        summary_row.addWidget(self.today_total_label)
+        summary_row.addSpacing(24)
+        summary_row.addWidget(self.week_total_label)
+        summary_row.addStretch()
+        summary_row.addWidget(clear_history_button)
+        history_layout.addLayout(summary_row)
+
+        self.history_table = QTableWidget(0, 5)
+        self.history_table.setHorizontalHeaderLabels(["日期", "Profile", "直播标题", "频道", "实际观看时长"])
+        self.history_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.history_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.history_table.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.history_table.verticalHeader().setVisible(False)
+        self.history_table.setMinimumHeight(180)
+        history_header = self.history_table.horizontalHeader()
+        history_header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        history_header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        history_header.setSectionResizeMode(2, QHeaderView.Stretch)
+        history_header.setSectionResizeMode(3, QHeaderView.Interactive)
+        history_header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        self.history_table.setColumnWidth(3, 180)
+        history_layout.addWidget(self.history_table, 1)
+        layout.addWidget(history_group, 1)
         return page
 
     def _build_profiles_tab(self) -> QWidget:
@@ -392,6 +428,7 @@ class MainWindow(QMainWindow):
         page_layout.addWidget(splitter)
 
         settings = QWidget()
+        settings.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
         form = QFormLayout(settings)
         self.browser_combo = QComboBox()
         self.browser_combo.addItem("Google Chrome", "chrome")
@@ -416,15 +453,21 @@ class MainWindow(QMainWindow):
         splitter.addWidget(settings)
 
         channels = QWidget()
+        channels.setMinimumHeight(260)
+        channels.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         channels_layout = QVBoxLayout(channels)
         channels_layout.addWidget(QLabel("自动检测频道（勾选启用）"))
         self.channel_table = QTableWidget(0, 3)
         self.channel_table.setHorizontalHeaderLabels(["启用", "名称", "频道 ID 或 URL"])
-        self.channel_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        self.channel_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
-        self.channel_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+        self.channel_table.setMinimumHeight(220)
+        self.channel_table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        channel_header = self.channel_table.horizontalHeader()
+        channel_header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        channel_header.setSectionResizeMode(1, QHeaderView.Interactive)
+        channel_header.setSectionResizeMode(2, QHeaderView.Stretch)
+        self.channel_table.setColumnWidth(1, 200)
         self.channel_table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        channels_layout.addWidget(self.channel_table)
+        channels_layout.addWidget(self.channel_table, 1)
         channel_buttons = QHBoxLayout()
         add_channel = QPushButton("增加频道")
         remove_channel = QPushButton("删除频道")
@@ -435,7 +478,11 @@ class MainWindow(QMainWindow):
         channel_buttons.addStretch()
         channels_layout.addLayout(channel_buttons)
         splitter.addWidget(channels)
-        splitter.setSizes([230, 260])
+        splitter.setCollapsible(0, False)
+        splitter.setCollapsible(1, False)
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+        splitter.setSizes([190, 360])
         return page
 
     def _load_into_ui(self) -> None:
@@ -610,6 +657,48 @@ class MainWindow(QMainWindow):
             self.channel_table.removeRow(row)
         if rows:
             self._save_from_ui()
+
+    def refresh_watch_history(self) -> None:
+        snapshot = self.service.history_snapshot()
+        self.today_total_label.setText(f"今日累计：{format_duration(snapshot.get('today_total', 0.0))}")
+        self.week_total_label.setText(f"近 7 天累计：{format_duration(snapshot.get('week_total', 0.0))}")
+        rows = list(snapshot.get("rows", []))
+        self.history_table.setUpdatesEnabled(False)
+        try:
+            self.history_table.setRowCount(len(rows))
+            for row_index, record in enumerate(rows):
+                title = str(record.get("title", ""))
+                values = [
+                    str(record.get("date", "")),
+                    str(record.get("profile", "")),
+                    title,
+                    str(record.get("channel", "")),
+                    format_duration(float(record.get("watch_seconds", 0.0))),
+                ]
+                for column, value in enumerate(values):
+                    item = QTableWidgetItem(value)
+                    item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+                    if column == 2:
+                        item.setToolTip(title)
+                    if column == 4:
+                        item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                    self.history_table.setItem(row_index, column, item)
+        finally:
+            self.history_table.setUpdatesEnabled(True)
+
+    def clear_watch_history(self) -> None:
+        answer = QMessageBox.question(
+            self,
+            "清空观看记录",
+            "确定要清空所有观看时长记录吗？",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if answer != QMessageBox.Yes:
+            return
+        self.service.clear_history()
+        self.refresh_watch_history()
+        self.append_log("观看时长记录已清空")
 
     def set_status(self, status: str) -> None:
         self.status_value.setText(status)

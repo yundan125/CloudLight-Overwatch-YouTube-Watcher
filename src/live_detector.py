@@ -7,7 +7,7 @@ import re
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 import requests
 import yt_dlp
@@ -56,6 +56,23 @@ def normalize_youtube_url(value: str) -> str:
     if not allowed:
         raise ValueError("只支持 youtube.com 或 youtu.be 地址")
     return value
+
+
+def extract_video_id(url: str) -> str:
+    """Return the 11-character YouTube id from a supported video URL."""
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").lower()
+    candidate = ""
+    if host == "youtu.be":
+        candidate = parsed.path.strip("/").split("/", 1)[0]
+    elif host == "youtube.com" or host.endswith(".youtube.com"):
+        if parsed.path.rstrip("/") == "/watch":
+            candidate = parse_qs(parsed.query).get("v", [""])[0]
+        else:
+            parts = [part for part in parsed.path.split("/") if part]
+            if len(parts) >= 2 and parts[0] in {"live", "shorts", "embed"}:
+                candidate = parts[1]
+    return candidate if re.fullmatch(r"[A-Za-z0-9_-]{11}", candidate) else ""
 
 
 def _channel_live_url(channel: dict[str, Any]) -> str:

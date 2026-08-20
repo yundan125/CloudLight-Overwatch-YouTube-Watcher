@@ -15,6 +15,7 @@ RESOURCE_DIR = Path(getattr(sys, "_MEIPASS", APP_DIR))
 CONFIG_PATH = APP_DIR / "config.json"
 PROFILES_DIR = APP_DIR / "profiles"
 LOGS_DIR = APP_DIR / "logs"
+WATCH_HISTORY_PATH = APP_DIR / "watch_history.json"
 
 
 def ensure_runtime_dirs() -> None:

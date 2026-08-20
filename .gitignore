@@ -6,5 +6,6 @@ __pycache__/
 *.py[cod]
 logs/*.log*
 profiles/*
+watch_history.json
 !profiles/.gitkeep
 !logs/.gitkeep
