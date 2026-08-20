@@ -2,9 +2,21 @@
 
 一个面向 Windows 的本地桌面工具：定期检查指定的守望先锋官方 YouTube 频道，发现直播后使用用户自己的 Chrome / Brave 独立 Profile 打开直播，并在运行期间检查浏览器和视频页面、尝试恢复意外暂停。
 
+> 本项目最初基于 [**ucarno/ow-league-tokens**](https://github.com/ucarno/ow-league-tokens) 开发，并在此基础上进行了较大幅度的重构与扩展；感谢原作者 **ucarno** 及贡献者公开源代码和早期实现。
 
 > 本软件只负责自动打开并维持 YouTube 直播观看，不保证任何具体掉宝、奖励或观看时长一定被 Blizzard / YouTube 计入。
 
+## 🙏 特别鸣谢
+
+本项目最初直接以 [**ucarno/ow-league-tokens**](https://github.com/ucarno/ow-league-tokens) 作为开发底座。
+
+原项目为 Overwatch YouTube 自动观赛提供了重要的早期设计和实现基础，包括自动寻找直播、使用浏览器持续观看、独立浏览器 Profile、多账号 / 多 Profile、Chrome / Brave 支持、自动静音、Headless 模式、定时检查直播状态，以及直播结束后继续等待下一场直播等思路。
+
+当前 CloudLight 版本在此基础上针对现在的 YouTube、Chrome 和 Overwatch 赛事 / 直播环境进行了较大幅度的重构：从 OWL / League Token 定位迁移为通用 Overwatch YouTube Watcher，移除了旧 OWL Schedule、`hqdefault_live.jpg` 检测和 Selenium / undetected-chromedriver 主控制链路，改用真实 Chrome / Brave 持久化 Profile，并增加 PySide6 中文 GUI、新的直播发现方式、手动直播 URL、多频道管理、播放状态监控与恢复、实际观看时长统计、近 7 天观看历史，以及 Windows 安装包等功能。
+
+感谢原作者 **ucarno** 及原项目贡献者公开源代码，使本项目能够在其基础上继续演进。
+
+原项目：**[ucarno/ow-league-tokens](https://github.com/ucarno/ow-league-tokens)**
 
 ## 当前功能
 
@@ -102,6 +114,17 @@ python -m venv .venv
 dist/CloudLight Overwatch YouTube Watcher/CloudLight Overwatch YouTube Watcher.exe
 dist/CloudLight-Overwatch-YouTube-Watcher.zip
 ```
+
+## 第三方开源组件
+
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp)：读取 YouTube 公开直播元数据。
+- [PySide6 / Qt for Python](https://doc.qt.io/qtforpython-6/)：构建桌面 GUI。
+- [Requests](https://requests.readthedocs.io/)：发送 HTTP 请求。
+- [websocket-client](https://github.com/websocket-client/websocket-client)：连接 Chrome / Brave DevTools WebSocket。
+- [PyInstaller](https://pyinstaller.org/)：构建 Windows 可执行程序。
+- [Inno Setup](https://jrsoftware.org/isinfo.php)：生成 Windows 安装包。
+
+更完整的项目来源与第三方说明见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。各组件分别适用其官方项目公布的许可证条款。
 
 ## 已知限制
 
